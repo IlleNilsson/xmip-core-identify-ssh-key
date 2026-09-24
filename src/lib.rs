@@ -21,16 +21,10 @@
 //! Only a pushed arrival carries a passed claim. Where Xmip was the SSH
 //! client, the key in play was Xmip's own and says nothing about the source.
 
+use context::property::{SSH_KEY, SSH_SESSION, SSH_SIGNATURE};
 use identify::evidence;
 use identify::{IdentifyError, Presented, StreamArrival, TransportIdentifier};
 use xcore::{Arriving, Mechanism};
-
-/// The property carrying the presented key's fingerprint.
-pub const KEY: &str = "ssh.key";
-/// The property carrying the signature the peer made with the key.
-pub const SIGNATURE: &str = "ssh.signature";
-/// The property carrying the session identifier the signature covers.
-pub const SESSION: &str = "ssh.session";
 
 const FINGERPRINT_PREFIX: &str = "SHA256:";
 
@@ -48,16 +42,16 @@ impl TransportIdentifier for SshKey {
             return Ok(None);
         }
 
-        let Some(fingerprint) = arrival.property(KEY).map(str::trim) else {
+        let Some(fingerprint) = arrival.property(SSH_KEY).map(str::trim) else {
             return Ok(None);
         };
         check_fingerprint(fingerprint)?;
 
         let mut claim = Presented::passed(self.mechanism(), fingerprint);
-        if let Some(signature) = arrival.property(SIGNATURE) {
+        if let Some(signature) = arrival.property(SSH_SIGNATURE) {
             claim = claim.with_proof(evidence::SSH_KEY_SIGNATURE, signature);
         }
-        if let Some(session) = arrival.property(SESSION) {
+        if let Some(session) = arrival.property(SSH_SESSION) {
             claim = claim.with_proof(evidence::SSH_KEY_SESSION, session);
         }
 
@@ -104,7 +98,7 @@ mod tests {
     #[test]
     fn a_presented_key_is_presented_by_its_fingerprint() {
         let stream = stream();
-        let properties = [(KEY.to_string(), FINGERPRINT.to_string())];
+        let properties = [(SSH_KEY.to_string(), FINGERPRINT.to_string())];
 
         let claim = SshKey
             .identify(&pushed(&stream, &properties))
@@ -122,9 +116,9 @@ mod tests {
     fn the_signature_and_session_ride_as_proof_where_the_transport_kept_them() {
         let stream = stream();
         let properties = [
-            (KEY.to_string(), FINGERPRINT.to_string()),
-            (SIGNATURE.to_string(), "c2ln".to_string()),
-            (SESSION.to_string(), "c2Vzc2lvbg".to_string()),
+            (SSH_KEY.to_string(), FINGERPRINT.to_string()),
+            (SSH_SIGNATURE.to_string(), "c2ln".to_string()),
+            (SSH_SESSION.to_string(), "c2Vzc2lvbg".to_string()),
         ];
 
         let claim = SshKey
@@ -154,7 +148,7 @@ mod tests {
     fn a_fingerprint_that_is_not_sha256_is_an_error_naming_why() {
         let stream = stream();
         let properties = [(
-            KEY.to_string(),
+            SSH_KEY.to_string(),
             "MD5:16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48".to_string(),
         )];
 
@@ -168,7 +162,7 @@ mod tests {
     #[test]
     fn a_fingerprint_of_the_wrong_length_is_an_error_naming_why() {
         let stream = stream();
-        let properties = [(KEY.to_string(), "SHA256:nThbg6".to_string())];
+        let properties = [(SSH_KEY.to_string(), "SHA256:nThbg6".to_string())];
 
         let failure = SshKey
             .identify(&pushed(&stream, &properties))
@@ -180,7 +174,7 @@ mod tests {
     #[test]
     fn a_scheduled_pickup_presents_nothing_because_the_key_was_xmips_own() {
         let stream = stream();
-        let properties = [(KEY.to_string(), FINGERPRINT.to_string())];
+        let properties = [(SSH_KEY.to_string(), FINGERPRINT.to_string())];
         let arrival = StreamArrival::new(
             &stream,
             Arriving::Scheduled,
