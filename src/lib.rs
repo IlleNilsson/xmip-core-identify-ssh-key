@@ -21,6 +21,7 @@
 //! Only a pushed arrival carries a passed claim. Where Xmip was the SSH
 //! client, the key in play was Xmip's own and says nothing about the source.
 
+use identify::evidence;
 use identify::{IdentifyError, Presented, StreamArrival, TransportIdentifier};
 use xcore::{Arriving, Mechanism};
 
@@ -30,10 +31,6 @@ pub const KEY: &str = "ssh.key";
 pub const SIGNATURE: &str = "ssh.signature";
 /// The property carrying the session identifier the signature covers.
 pub const SESSION: &str = "ssh.session";
-/// The proof name the signature rides under.
-pub const SIGNATURE_PROOF: &str = "ssh-key.signature";
-/// The proof name the session identifier rides under.
-pub const SESSION_PROOF: &str = "ssh-key.session";
 
 const FINGERPRINT_PREFIX: &str = "SHA256:";
 
@@ -58,10 +55,10 @@ impl TransportIdentifier for SshKey {
 
         let mut claim = Presented::passed(self.mechanism(), fingerprint);
         if let Some(signature) = arrival.property(SIGNATURE) {
-            claim = claim.with_proof(SIGNATURE_PROOF, signature);
+            claim = claim.with_proof(evidence::SSH_KEY_SIGNATURE, signature);
         }
         if let Some(session) = arrival.property(SESSION) {
-            claim = claim.with_proof(SESSION_PROOF, session);
+            claim = claim.with_proof(evidence::SSH_KEY_SESSION, session);
         }
 
         Ok(Some(claim))
@@ -118,7 +115,7 @@ mod tests {
         assert_eq!(claim.established, Established::Passed);
         assert_eq!(claim.layer(), Layer::Transport);
         assert_eq!(claim.mechanism.name(), "ssh-key");
-        assert!(claim.proof(SIGNATURE_PROOF).is_none());
+        assert!(claim.proof(evidence::SSH_KEY_SIGNATURE).is_none());
     }
 
     #[test]
@@ -135,8 +132,8 @@ mod tests {
             .expect("read")
             .expect("a claim");
 
-        assert_eq!(claim.proof(SIGNATURE_PROOF), Some("c2ln"));
-        assert_eq!(claim.proof(SESSION_PROOF), Some("c2Vzc2lvbg"));
+        assert_eq!(claim.proof(evidence::SSH_KEY_SIGNATURE), Some("c2ln"));
+        assert_eq!(claim.proof(evidence::SSH_KEY_SESSION), Some("c2Vzc2lvbg"));
         assert!(claim.evidence.is_empty());
     }
 
