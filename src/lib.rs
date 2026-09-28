@@ -18,6 +18,10 @@
 //! ssh.session     the session identifier, base64          proof ssh-key.session
 //! ```
 //!
+//! A fingerprint is read as `xmip-core-library-ssh` reads it
+//! (`ssh::Fingerprint`), `SHA256:` and the base64 of thirty-two bytes; until
+//! 2026-09-28 this crate checked it with a base64 alphabet of its own.
+//!
 //! Only a pushed arrival carries a passed claim. Where Xmip was the SSH
 //! client, the key in play was Xmip's own and says nothing about the source.
 
@@ -25,8 +29,6 @@ use context::property::{SSH_KEY, SSH_SESSION, SSH_SIGNATURE};
 use identify::evidence;
 use identify::{IdentifyError, Presented, StreamArrival, TransportIdentifier};
 use xcore::{Arriving, Mechanism};
-
-const FINGERPRINT_PREFIX: &str = "SHA256:";
 
 /// Reads the public key fingerprint the transport reported.
 #[derive(Clone, Copy, Debug, Default)]
@@ -45,7 +47,7 @@ impl TransportIdentifier for SshKey {
         let Some(fingerprint) = arrival.property(SSH_KEY).map(str::trim) else {
             return Ok(None);
         };
-        check_fingerprint(fingerprint)?;
+        ssh::Fingerprint::parse(fingerprint)?;
 
         let mut claim = Presented::passed(self.mechanism(), fingerprint);
         if let Some(signature) = arrival.property(SSH_SIGNATURE) {
@@ -57,26 +59,6 @@ impl TransportIdentifier for SshKey {
 
         Ok(Some(claim))
     }
-}
-
-/// `SHA256:` followed by the base64 of thirty-two bytes, which is forty-three
-/// characters without padding as OpenSSH prints it, or forty-four with.
-fn check_fingerprint(fingerprint: &str) -> Result<(), IdentifyError> {
-    let Some(digest) = fingerprint.strip_prefix(FINGERPRINT_PREFIX) else {
-        return Err(IdentifyError::new(format!(
-            "the SSH key fingerprint is not SHA256: `{fingerprint}`"
-        )));
-    };
-    let body = digest.trim_end_matches('=');
-    let base64 = body
-        .bytes()
-        .all(|byte| byte.is_ascii_alphanumeric() || byte == b'+' || byte == b'/');
-    if body.len() != 43 || !base64 {
-        return Err(IdentifyError::new(
-            "the SSH key fingerprint is not the base64 of a SHA-256 digest",
-        ));
-    }
-    Ok(())
 }
 
 #[cfg(test)]
