@@ -116,7 +116,7 @@ mod tests {
     #[test]
     fn an_arrival_without_a_key_presents_nothing() {
         let stream = stream();
-        let properties = [("ssh.user".to_string(), "partner".to_string())];
+        let properties = [("ssh.user".to_string(), "party".to_string())];
 
         assert!(
             SshKey
@@ -160,7 +160,7 @@ mod tests {
         let arrival = StreamArrival::new(
             &stream,
             Arriving::Scheduled,
-            "sftp://partner/out",
+            "sftp://party/out",
             &properties,
         );
 
