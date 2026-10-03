@@ -73,8 +73,8 @@ mod tests {
         Stream::new(StreamId::new(1), b"<order/>".to_vec(), None)
     }
 
-    fn pushed<'a>(stream: &'a Stream, properties: &'a [(String, String)]) -> StreamArrival<'a> {
-        StreamArrival::new(stream, Arriving::Pushed, "sftp://xmip/in", properties)
+    fn pushed<'a>(_stream: &'a Stream, properties: &'a [(String, String)]) -> StreamArrival<'a> {
+        StreamArrival::new(Arriving::Pushed, "sftp://xmip/in", properties)
     }
 
     #[test]
@@ -155,14 +155,8 @@ mod tests {
 
     #[test]
     fn a_scheduled_pickup_presents_nothing_because_the_key_was_xmips_own() {
-        let stream = stream();
         let properties = [(SSH_KEY.to_string(), FINGERPRINT.to_string())];
-        let arrival = StreamArrival::new(
-            &stream,
-            Arriving::Scheduled,
-            "sftp://party/out",
-            &properties,
-        );
+        let arrival = StreamArrival::new(Arriving::Scheduled, "sftp://party/out", &properties);
 
         assert!(SshKey.identify(&arrival).expect("read").is_none());
     }
