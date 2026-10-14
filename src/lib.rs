@@ -110,7 +110,7 @@ mod tests {
 
         assert_eq!(claim.proof(evidence::SSH_KEY_SIGNATURE), Some("c2ln"));
         assert_eq!(claim.proof(evidence::SSH_KEY_SESSION), Some("c2Vzc2lvbg"));
-        assert!(claim.evidence.is_empty());
+        assert_eq!(claim.evidence, [] as [(String, String); 0]);
     }
 
     #[test]
